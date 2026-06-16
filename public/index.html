@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Thrift Flip — Price Scanner</title>
+  <title>Thrift Flip - Price Scanner</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -287,7 +287,7 @@
   <div class="header">
     <div class="header-eyebrow">Thrift Flip</div>
     <div class="header-title">Price Scanner</div>
-    <div class="header-sub">Snap an item — see what it sells for on eBay</div>
+    <div class="header-sub">Snap an item - see what it sells for on eBay</div>
   </div>
 
   <div id="app"></div>
@@ -295,7 +295,7 @@
 
   <div class="footer">
     Prices sourced from eBay sold listings via AI search.<br>
-    Results are estimates — always verify before buying.
+    Results are estimates - always verify before buying.
   </div>
 </div>
 
@@ -380,7 +380,7 @@ Return ONLY valid JSON (no markdown fences):
   ]
 }
 
-Make options short (2–4 words each). Always include a "Not sure" or "Can't tell" option. Generate questions that are specific to this item type — not generic.` }
+Make options short (2–4 words each). Always include a "Not sure" or "Can't tell" option. Generate questions that are specific to this item type - not generic.` }
         ]
       }]
     });
@@ -428,7 +428,7 @@ Return ONLY valid JSON (no markdown fences):
   // ── Helpers ────────────────────────────────────────────────────────────────
   function fmt(n) {
     const num = Number(n);
-    return isNaN(num) ? '—' : num.toFixed(2);
+    return isNaN(num) ? '-' : num.toFixed(2);
   }
 
   const COND_STYLES = {
@@ -522,7 +522,7 @@ Return ONLY valid JSON (no markdown fences):
 
       // Build answered summary to show context
       const answeredPairs = (item.questions || [])
-        .map((q, i) => answers[i] ? `${q.text.replace(/\?$/, '')} — ${answers[i]}` : null)
+        .map((q, i) => answers[i] ? `${q.text.replace(/\?$/, '')} - ${answers[i]}` : null)
         .filter(Boolean);
 
       html = `

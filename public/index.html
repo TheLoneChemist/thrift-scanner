@@ -431,17 +431,14 @@ Make question options short (2-4 words). Always include a "Not sure" option. Que
     throw new Error('Could not identify any items in the photo.');
   }
 
-  // ── Step 2: Look up pricing with clarification context ────────────────────
+  // ── Step 2: Look up pricing (runs in background during clarification) ────────
   async function getPricing(item, answers) {
-    // Build context string from Q&A
     const qa = (item.questions || []).map((q, i) => {
       const ans = answers[i];
       return ans ? `- ${q.text} → ${ans}` : null;
     }).filter(Boolean).join('\n');
 
-    const context = qa
-      ? `\n\nAdditional details from seller inspection:\n${qa}`
-      : '';
+    const context = qa ? `\n\nAdditional details from inspection:\n${qa}` : '';
 
     const data = await callAPI({
       model: 'claude-sonnet-4-6',
@@ -451,9 +448,7 @@ Make question options short (2-4 words). Always include a "Not sure" option. Que
         role: 'user',
         content: `Search eBay for recently SOLD (completed) listings for: "${item.ebayQuery}"${context}
 
-Use the additional details above to refine your search and price estimate (e.g. "with charger", "no box", specific size, etc.). Find real sale prices from eBay completed/sold listings.
-
-Return ONLY valid JSON (no markdown fences):
+Find real sale prices from eBay completed/sold listings. Return ONLY valid JSON (no markdown fences):
 {
   "avg": 25.00,
   "low": 10.00,
@@ -467,6 +462,40 @@ Return ONLY valid JSON (no markdown fences):
       }]
     });
     return parseJSON(data.content.map(c => c.text || '').filter(Boolean).join(''));
+  }
+
+  // ── Step 3: Quick price adjustment based on answers (no web search) ─────────
+  async function refinePricing(base, item, answers) {
+    const qa = (item.questions || []).map((q, i) => {
+      const ans = answers[i];
+      const skip = !ans || ans === 'Not sure' || ans === "Can't tell";
+      return skip ? null : `- ${q.text} → ${ans}`;
+    }).filter(Boolean).join('\n');
+
+    if (!qa) return base;
+
+    const data = await callAPI({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `eBay sold prices for "${item.name}": avg $${base.avg}, low $${base.low}, high $${base.high} (~${base.count} sales).
+
+The seller confirmed:
+${qa}
+
+Adjust the estimates if these details materially affect resale value. Return ONLY valid JSON (no markdown fences):
+{
+  "avg": ${base.avg},
+  "low": ${base.low},
+  "high": ${base.high},
+  "count": ${base.count},
+  "tip": "one sentence on how these specific details affect value",
+  "sales": ${JSON.stringify(base.sales || [])}
+}`
+      }]
+    });
+    return parseJSON(data.content.map(c => c.text || '').join(''));
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -694,7 +723,8 @@ Return ONLY valid JSON (no markdown fences):
       card.addEventListener('click', () => {
         const idx = parseInt(card.dataset.idx);
         const item = state.foundItems[idx];
-        state = { ...state, phase: 'clarifying', item, answers: {} };
+        const pricingPromise = getPricing(item, {});
+        state = { ...state, phase: 'clarifying', item, answers: {}, pricingPromise };
         render();
       });
     });
@@ -719,12 +749,25 @@ Return ONLY valid JSON (no markdown fences):
 
   // ── Start pricing after clarification ─────────────────────────────────────
   async function startPricing() {
-    const { item, answers } = state;
+    const { item, answers, pricingPromise } = state;
     state.phase = 'loading';
-    state.status = `Searching eBay for "${item.ebayQuery}"…`;
+    state.status = 'Looking up eBay prices...';
     render();
     try {
-      const pricing = await getPricing(item, answers);
+      const base = await pricingPromise;
+
+      const hasSubstantiveAnswers = (item.questions || []).some((q, i) => {
+        const ans = answers[i];
+        return ans && ans !== 'Not sure' && ans !== "Can't tell";
+      });
+
+      let pricing = base;
+      if (hasSubstantiveAnswers) {
+        state.status = 'Adjusting for your details...';
+        render();
+        pricing = await refinePricing(base, item, answers);
+      }
+
       state = { ...state, phase: 'results', pricing };
       render();
     } catch (err) {
@@ -754,7 +797,9 @@ Return ONLY valid JSON (no markdown fences):
       const b64 = await compressImage(file);
       const items = await identifyItem(b64);
       if (items.length === 1) {
-        state = { ...state, phase: 'clarifying', item: items[0], answers: {} };
+        const item = items[0];
+        const pricingPromise = getPricing(item, {});
+        state = { ...state, phase: 'clarifying', item, answers: {}, pricingPromise };
       } else {
         state = { ...state, phase: 'selecting', foundItems: items };
       }

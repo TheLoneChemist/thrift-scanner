@@ -9,20 +9,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #ffffff;
-      --bg-2: #f5f5f4;
-      --bg-3: #eeeeec;
-      --text-1: #1a1a18;
-      --text-2: #4a4a48;
-      --text-3: #888884;
-      --border: rgba(0,0,0,0.1);
-      --border-md: rgba(0,0,0,0.18);
+      --bg: #FBF6EC;
+      --bg-2: #F2EAD3;
+      --bg-3: #EDE0C8;
+      --text-1: #2C1A0E;
+      --text-2: #6B4C35;
+      --text-3: #A08060;
+      --border: rgba(101,71,50,0.15);
+      --border-md: rgba(101,71,50,0.28);
       --radius-md: 8px;
       --radius-lg: 12px;
       --radius-xl: 18px;
-      --amber: #BA7517;
-      --amber-bg: #FAEEDA;
-      --amber-border: #FAC775;
+      --amber: #8B5E1A;
+      --amber-bg: #EDE0C8;
+      --amber-border: #C4924A;
       --teal: #0F6E56;
       --teal-bg: #E1F5EE;
       --danger: #A32D2D;
@@ -31,21 +31,21 @@
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #1a1a18;
-        --bg-2: #242422;
-        --bg-3: #2e2e2c;
-        --text-1: #f0ede8;
-        --text-2: #a8a8a4;
-        --text-3: #666662;
-        --border: rgba(255,255,255,0.1);
-        --border-md: rgba(255,255,255,0.18);
+        --bg: #2A1E10;
+        --bg-2: #1E1408;
+        --bg-3: #362818;
+        --text-1: #F2EAD3;
+        --text-2: #C4A882;
+        --text-3: #7A6040;
+        --border: rgba(242,234,211,0.1);
+        --border-md: rgba(242,234,211,0.2);
         --amber: #EF9F27;
-        --amber-bg: #2a1e08;
+        --amber-bg: #2A1E08;
         --amber-border: #854F0B;
         --teal: #5DCAA5;
-        --teal-bg: #082a1e;
+        --teal-bg: #082A1E;
         --danger: #F09595;
-        --danger-bg: #2a0808;
+        --danger-bg: #2A0808;
       }
     }
 
@@ -159,6 +159,35 @@
     .notes { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-top: 10px; }
 
     /* Clarification questions */
+    /* Item selection */
+    .item-select-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 10px;
+      cursor: pointer;
+      background: var(--bg);
+      transition: border-color 0.12s, background 0.12s;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+    }
+    .item-select-card:hover { background: var(--bg-2); border-color: var(--border-md); }
+    .item-select-card:active { transform: scale(0.99); }
+    .item-select-icon {
+      width: 44px; height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--bg-2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 22px;
+    }
+    .item-select-name { font-size: 14px; font-weight: 500; color: var(--text-1); margin-bottom: 3px; }
+    .item-select-meta { font-size: 12px; color: var(--text-3); }
+
     .clarify-intro {
       font-size: 13px;
       color: var(--text-2);
@@ -347,44 +376,59 @@
     return data;
   }
 
-  // ── Step 1: Identify item + generate clarifying questions ─────────────────
+  // Category icons for the selection screen
+  const CATEGORY_ICONS = {
+    'Electronics': 'ti-device-laptop', 'Clothing': 'ti-shirt',
+    'Kitchenware': 'ti-tools-kitchen-2', 'Books': 'ti-book',
+    'Toys': 'ti-puzzle', 'Furniture': 'ti-armchair',
+    'Sports': 'ti-ball-football', 'Collectibles': 'ti-award',
+    'Other': 'ti-tag',
+  };
+
+  // ── Step 1: Identify items + generate clarifying questions ────────────────
   async function identifyItem(b64) {
     const data = await callAPI({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 2000,
       messages: [{
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-          { type: 'text', text: `You are a resale expert helping identify thrift store items. Identify this item as specifically as possible.
+          { type: 'text', text: `You are a resale expert helping identify thrift store items for resale pricing.
 
-Then generate 2–3 short clarifying questions whose answers would meaningfully change the resale price. Focus on things you cannot tell from the photo alone (accessories included, original packaging, model number, size, functionality). Skip questions about things already clearly visible.
+First, identify ALL distinct resaleable items visible in the photo. If there is only one item, return just that one. If there are multiple separate items, list each one.
+
+For EACH item, also generate 2-3 short clarifying questions whose answers would meaningfully change the resale price. Focus on things not visible in the photo (accessories, packaging, model number, size, working condition). Skip anything already clearly visible.
 
 Return ONLY valid JSON (no markdown fences):
 {
-  "name": "specific item name with brand and model if identifiable",
-  "brand": "brand name, or empty string if unknown",
-  "category": "Electronics|Clothing|Kitchenware|Books|Toys|Furniture|Sports|Collectibles|Other",
-  "ebayQuery": "optimized eBay search query to find sold listings",
-  "condition": "Poor|Fair|Good|Very Good|Excellent",
-  "notes": "2–3 key details visible in the photo that affect resale value",
-  "questions": [
+  "items": [
     {
-      "text": "Does it include the original charger?",
-      "options": ["Yes, included", "No charger", "Not sure"]
-    },
-    {
-      "text": "Does it come with the original box?",
-      "options": ["Yes, with box", "No box", "Not sure"]
+      "name": "specific item name with brand and model if identifiable",
+      "brand": "brand name, or empty string if unknown",
+      "category": "Electronics|Clothing|Kitchenware|Books|Toys|Furniture|Sports|Collectibles|Other",
+      "ebayQuery": "optimized eBay search query to find sold listings",
+      "condition": "Poor|Fair|Good|Very Good|Excellent",
+      "notes": "2-3 key details visible in the photo that affect resale value",
+      "questions": [
+        {
+          "text": "Does it include the original charger?",
+          "options": ["Yes, included", "No charger", "Not sure"]
+        }
+      ]
     }
   ]
 }
 
-Make options short (2–4 words each). Always include a "Not sure" or "Can't tell" option. Generate questions that are specific to this item type - not generic.` }
+Make question options short (2-4 words). Always include a "Not sure" option. Questions must be specific to each item type, not generic.` }
         ]
       }]
     });
-    return parseJSON(data.content.map(c => c.text || '').join(''));
+    const parsed = parseJSON(data.content.map(c => c.text || '').join(''));
+    // Normalise: support both { items: [...] } and a bare single-item object
+    if (Array.isArray(parsed.items)) return parsed.items;
+    if (parsed.name) return [parsed];
+    throw new Error('Could not identify any items in the photo.');
   }
 
   // ── Step 2: Look up pricing with clarification context ────────────────────
@@ -463,6 +507,40 @@ Return ONLY valid JSON (no markdown fences):
           <div class="loading-title">${status}</div>
           <div class="loading-sub">Takes about 15–25 seconds</div>
         </div>`;
+    }
+
+    // ── SELECTING (multiple items found) ──
+    else if (phase === 'selecting') {
+      const items = state.foundItems || [];
+      html = `
+        ${preview ? `<img src="${preview}" class="preview-img" alt="Scanned items">` : ''}
+        <div class="card">
+          <div class="label">Multiple items found</div>
+          <div style="font-size:15px;font-weight:500;margin-bottom:4px">Which one do you want to price?</div>
+          <div style="font-size:13px;color:var(--text-3)">Tap the item you're holding.</div>
+        </div>
+        ${items.map((it, idx) => {
+          const iconClass = CATEGORY_ICONS[it.category] || 'ti-tag';
+          const condStyle = COND_STYLES[it.condition] || COND_STYLES['Good'];
+          return `
+            <button class="item-select-card" data-idx="${idx}">
+              <div class="item-select-icon">
+                <i class="ti ${iconClass}" style="font-size:22px;color:var(--text-3)" aria-hidden="true"></i>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="item-select-name">${it.name || 'Unknown item'}</div>
+                <div class="item-select-meta">
+                  ${it.brand ? `${it.brand} &middot; ` : ''}
+                  <span style="${condStyle};padding:1px 6px;border-radius:4px;font-size:11px;font-weight:500">${it.condition || ''}</span>
+                </div>
+              </div>
+              <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text-3);flex-shrink:0" aria-hidden="true"></i>
+            </button>`;
+        }).join('')}
+        <button class="btn" id="resetBtn" style="margin-top:6px">
+          <i class="ti ti-camera" aria-hidden="true"></i>
+          Scan a different photo
+        </button>`;
     }
 
     // ── CLARIFYING ──
@@ -611,6 +689,16 @@ Return ONLY valid JSON (no markdown fences):
       });
     }
 
+    // Item selection buttons
+    document.querySelectorAll('.item-select-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.idx);
+        const item = state.foundItems[idx];
+        state = { ...state, phase: 'clarifying', item, answers: {} };
+        render();
+      });
+    });
+
     // Option buttons (clarification)
     document.querySelectorAll('.option-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -648,7 +736,7 @@ Return ONLY valid JSON (no markdown fences):
   // ── Reset ──────────────────────────────────────────────────────────────────
   function reset() {
     if (state.preview) URL.revokeObjectURL(state.preview);
-    state = { phase: 'idle', preview: null, item: null, pricing: null, answers: {}, status: '', error: '' };
+    state = { phase: 'idle', preview: null, item: null, foundItems: null, pricing: null, answers: {}, status: '', error: '' };
     fileInput.value = '';
     render();
   }
@@ -664,8 +752,12 @@ Return ONLY valid JSON (no markdown fences):
 
     try {
       const b64 = await compressImage(file);
-      const item = await identifyItem(b64);
-      state = { ...state, phase: 'clarifying', item };
+      const items = await identifyItem(b64);
+      if (items.length === 1) {
+        state = { ...state, phase: 'clarifying', item: items[0], answers: {} };
+      } else {
+        state = { ...state, phase: 'selecting', foundItems: items };
+      }
       render();
     } catch (err) {
       state = { ...state, phase: 'error', error: err.message || 'Something went wrong. Try a clearer photo.' };

@@ -22,6 +22,7 @@
       --radius-xl: 18px;
       --amber: #BA7517;
       --amber-bg: #FAEEDA;
+      --amber-border: #FAC775;
       --teal: #0F6E56;
       --teal-bg: #E1F5EE;
       --danger: #A32D2D;
@@ -40,6 +41,7 @@
         --border-md: rgba(255,255,255,0.18);
         --amber: #EF9F27;
         --amber-bg: #2a1e08;
+        --amber-border: #854F0B;
         --teal: #5DCAA5;
         --teal-bg: #082a1e;
         --danger: #F09595;
@@ -66,7 +68,6 @@
       padding: 20px 18px 48px;
     }
 
-    /* Header */
     .header {
       text-align: center;
       margin-bottom: 28px;
@@ -79,18 +80,9 @@
       color: var(--text-3);
       margin-bottom: 5px;
     }
-    .header-title {
-      font-size: 24px;
-      font-weight: 600;
-      color: var(--text-1);
-      margin-bottom: 5px;
-    }
-    .header-sub {
-      font-size: 13px;
-      color: var(--text-3);
-    }
+    .header-title { font-size: 24px; font-weight: 600; color: var(--text-1); margin-bottom: 5px; }
+    .header-sub { font-size: 13px; color: var(--text-3); }
 
-    /* Cards */
     .card {
       background: var(--bg);
       border: 0.5px solid var(--border);
@@ -99,7 +91,6 @@
       margin-bottom: 12px;
     }
 
-    /* Drop zone */
     .drop-zone {
       border: 1.5px dashed var(--border-md);
       border-radius: var(--radius-xl);
@@ -109,31 +100,20 @@
       background: var(--bg-2);
       transition: border-color 0.15s, background 0.15s;
     }
-    .drop-zone:hover, .drop-zone:focus {
-      border-color: var(--amber);
-      background: var(--bg-3);
-      outline: none;
-    }
-    .drop-zone-icon {
-      font-size: 52px;
-      color: var(--text-3);
-      display: block;
-      margin-bottom: 14px;
-    }
+    .drop-zone:hover, .drop-zone:focus { border-color: var(--amber); background: var(--bg-3); outline: none; }
+    .drop-zone-icon { font-size: 52px; color: var(--text-3); display: block; margin-bottom: 14px; }
     .drop-zone-title { font-size: 17px; font-weight: 500; margin-bottom: 6px; }
     .drop-zone-sub { font-size: 13px; color: var(--text-3); }
 
-    /* Preview image */
     .preview-img {
       width: 100%;
       border-radius: var(--radius-lg);
-      max-height: 260px;
+      max-height: 220px;
       object-fit: cover;
       margin-bottom: 14px;
       display: block;
     }
 
-    /* Spinner */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 36px; height: 36px;
@@ -153,7 +133,6 @@
     .loading-title { font-size: 15px; font-weight: 500; margin-bottom: 5px; }
     .loading-sub { font-size: 12px; color: var(--text-3); }
 
-    /* Section label */
     .label {
       font-size: 10px;
       letter-spacing: 2.5px;
@@ -162,7 +141,6 @@
       margin-bottom: 7px;
     }
 
-    /* Tags */
     .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
     .tag {
       font-size: 12px;
@@ -178,9 +156,47 @@
       border-radius: var(--radius-md);
       padding: 3px 9px;
     }
-
-    /* Notes */
     .notes { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-top: 10px; }
+
+    /* Clarification questions */
+    .clarify-intro {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .question-block { margin-bottom: 18px; }
+    .question-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-1);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .option-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .option-btn {
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      border: 0.5px solid var(--border-md);
+      background: var(--bg-2);
+      color: var(--text-2);
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+    .option-btn:hover { background: var(--bg-3); color: var(--text-1); }
+    .option-btn.selected {
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+      color: var(--amber);
+    }
 
     /* Price display */
     .price-hero { margin: 2px 0 4px; line-height: 1; }
@@ -189,15 +205,10 @@
     .price-count { font-size: 12px; color: var(--text-3); margin-bottom: 14px; }
 
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .stat-box {
-      background: var(--bg-2);
-      border-radius: var(--radius-md);
-      padding: 10px 12px;
-    }
+    .stat-box { background: var(--bg-2); border-radius: var(--radius-md); padding: 10px 12px; }
     .stat-label { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
     .stat-val { font-size: 20px; font-weight: 500; }
 
-    /* Tip */
     .tip-box {
       background: var(--bg-2);
       border: 0.5px solid var(--border);
@@ -211,7 +222,6 @@
     .tip-icon { font-size: 16px; color: #185FA5; flex-shrink: 0; margin-top: 1px; }
     .tip-text { font-size: 13px; color: var(--text-2); line-height: 1.6; }
 
-    /* Sales list */
     .sale-row {
       display: flex;
       justify-content: space-between;
@@ -224,7 +234,6 @@
     .sale-title { font-size: 13px; color: var(--text-2); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sale-price { font-size: 14px; font-weight: 500; flex-shrink: 0; }
 
-    /* Button */
     .btn {
       width: 100%;
       padding: 14px;
@@ -241,11 +250,17 @@
       background: var(--bg-2);
       color: var(--text-1);
       transition: background 0.15s;
+      margin-bottom: 10px;
     }
     .btn:hover { background: var(--bg-3); }
     .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+      color: var(--amber);
+    }
+    .btn-primary:hover { filter: brightness(0.95); }
 
-    /* Error */
     .err-box {
       background: var(--danger-bg);
       border: 0.5px solid var(--danger);
@@ -258,7 +273,6 @@
     .err-title { font-size: 14px; font-weight: 600; color: var(--danger); margin-bottom: 4px; }
     .err-msg { font-size: 13px; color: var(--text-2); }
 
-    /* Footer */
     .footer {
       text-align: center;
       margin-top: 32px;
@@ -266,7 +280,6 @@
       color: var(--text-3);
       line-height: 1.7;
     }
-    .footer a { color: var(--text-3); }
   </style>
 </head>
 <body>
@@ -278,7 +291,6 @@
   </div>
 
   <div id="app"></div>
-
   <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
   <div class="footer">
@@ -292,9 +304,10 @@
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
 
-  let state = { phase: 'idle', preview: null, item: null, pricing: null, status: '', error: '' };
+  // state.answers = { [questionIndex]: "answer string" }
+  let state = { phase: 'idle', preview: null, item: null, pricing: null, answers: {}, status: '', error: '' };
 
-  // ── Image compression ────────────────────────────────────────────────────────
+  // ── Image compression ──────────────────────────────────────────────────────
   function compressImage(file) {
     return new Promise(resolve => {
       const canvas = document.createElement('canvas');
@@ -314,7 +327,7 @@
     });
   }
 
-  // ── JSON parsing (handles markdown fences) ───────────────────────────────────
+  // ── JSON parsing ───────────────────────────────────────────────────────────
   function parseJSON(text) {
     const clean = text.replace(/```[a-z]*\n?|\n?```/g, '').trim();
     const match = clean.match(/\{[\s\S]*\}/);
@@ -322,7 +335,7 @@
     return JSON.parse(match[0]);
   }
 
-  // ── API calls ────────────────────────────────────────────────────────────────
+  // ── API call ───────────────────────────────────────────────────────────────
   async function callAPI(body) {
     const res = await fetch(API_ENDPOINT, {
       method: 'POST',
@@ -334,6 +347,7 @@
     return data;
   }
 
+  // ── Step 1: Identify item + generate clarifying questions ─────────────────
   async function identifyItem(b64) {
     const data = await callAPI({
       model: 'claude-sonnet-4-6',
@@ -342,41 +356,66 @@
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-          { type: 'text', text: `You are a resale expert helping identify thrift store items. Identify this item as specifically as possible — brand, model, size, any visible details that affect resale value.
+          { type: 'text', text: `You are a resale expert helping identify thrift store items. Identify this item as specifically as possible.
 
-Return ONLY valid JSON (no markdown fences, no explanation):
+Then generate 2–3 short clarifying questions whose answers would meaningfully change the resale price. Focus on things you cannot tell from the photo alone (accessories included, original packaging, model number, size, functionality). Skip questions about things already clearly visible.
+
+Return ONLY valid JSON (no markdown fences):
 {
   "name": "specific item name with brand and model if identifiable",
   "brand": "brand name, or empty string if unknown",
   "category": "Electronics|Clothing|Kitchenware|Books|Toys|Furniture|Sports|Collectibles|Other",
-  "ebayQuery": "optimized eBay search query to find sold listings for this exact item",
+  "ebayQuery": "optimized eBay search query to find sold listings",
   "condition": "Poor|Fair|Good|Very Good|Excellent",
-  "notes": "2–3 key details that most affect resale value"
-}` }
+  "notes": "2–3 key details visible in the photo that affect resale value",
+  "questions": [
+    {
+      "text": "Does it include the original charger?",
+      "options": ["Yes, included", "No charger", "Not sure"]
+    },
+    {
+      "text": "Does it come with the original box?",
+      "options": ["Yes, with box", "No box", "Not sure"]
+    }
+  ]
+}
+
+Make options short (2–4 words each). Always include a "Not sure" or "Can't tell" option. Generate questions that are specific to this item type — not generic.` }
         ]
       }]
     });
     return parseJSON(data.content.map(c => c.text || '').join(''));
   }
 
-  async function getPricing(query) {
+  // ── Step 2: Look up pricing with clarification context ────────────────────
+  async function getPricing(item, answers) {
+    // Build context string from Q&A
+    const qa = (item.questions || []).map((q, i) => {
+      const ans = answers[i];
+      return ans ? `- ${q.text} → ${ans}` : null;
+    }).filter(Boolean).join('\n');
+
+    const context = qa
+      ? `\n\nAdditional details from seller inspection:\n${qa}`
+      : '';
+
     const data = await callAPI({
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{
         role: 'user',
-        content: `Search eBay for recently SOLD (completed) listings for: "${query}"
+        content: `Search eBay for recently SOLD (completed) listings for: "${item.ebayQuery}"${context}
 
-Find real sale prices from eBay completed/sold listings, not just listing prices.
+Use the additional details above to refine your search and price estimate (e.g. "with charger", "no box", specific size, etc.). Find real sale prices from eBay completed/sold listings.
 
-Return ONLY valid JSON (no markdown fences, no explanation):
+Return ONLY valid JSON (no markdown fences):
 {
   "avg": 25.00,
   "low": 10.00,
   "high": 50.00,
   "count": 8,
-  "tip": "one concrete sentence about what most affects value for this item",
+  "tip": "one concrete sentence about what most affects value for this specific item",
   "sales": [
     {"title": "listing title", "price": 25.00}
   ]
@@ -386,7 +425,7 @@ Return ONLY valid JSON (no markdown fences, no explanation):
     return parseJSON(data.content.map(c => c.text || '').filter(Boolean).join(''));
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function fmt(n) {
     const num = Number(n);
     return isNaN(num) ? '—' : num.toFixed(2);
@@ -400,11 +439,12 @@ Return ONLY valid JSON (no markdown fences, no explanation):
     'Excellent': 'color:#185FA5;background:#E6F1FB;border:0.5px solid #85B7EB',
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   function render() {
-    const { phase, preview, item, pricing, status, error } = state;
+    const { phase, preview, item, pricing, answers, status, error } = state;
     let html = '';
 
+    // ── IDLE ──
     if (phase === 'idle') {
       html = `
         <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Take photo or choose from camera roll">
@@ -414,6 +454,7 @@ Return ONLY valid JSON (no markdown fences, no explanation):
         </div>`;
     }
 
+    // ── LOADING ──
     else if (phase === 'loading') {
       html = `
         ${preview ? `<img src="${preview}" class="preview-img" alt="Item being scanned">` : ''}
@@ -424,8 +465,26 @@ Return ONLY valid JSON (no markdown fences, no explanation):
         </div>`;
     }
 
-    else if (phase === 'results' && item && pricing) {
+    // ── CLARIFYING ──
+    else if (phase === 'clarifying' && item) {
       const condStyle = COND_STYLES[item.condition] || COND_STYLES['Good'];
+      const questions = item.questions || [];
+
+      const questionsHtml = questions.map((q, qi) => `
+        <div class="question-block">
+          <div class="question-text">${q.text}</div>
+          <div class="option-grid">
+            ${(q.options || []).map(opt => `
+              <button
+                class="option-btn ${answers[qi] === opt ? 'selected' : ''}"
+                data-qi="${qi}"
+                data-opt="${opt.replace(/"/g, '&quot;')}"
+              >${opt}</button>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+
       html = `
         ${preview ? `<img src="${preview}" class="preview-img" alt="Scanned item">` : ''}
 
@@ -438,6 +497,49 @@ Return ONLY valid JSON (no markdown fences, no explanation):
             ${item.condition ? `<span class="tag-condition" style="${condStyle}">${item.condition}</span>` : ''}
           </div>
           ${item.notes ? `<div class="notes">${item.notes}</div>` : ''}
+        </div>
+
+        ${questions.length > 0 ? `
+        <div class="card">
+          <div class="label">A few quick questions</div>
+          <div class="clarify-intro">Your answers help find the most accurate price.</div>
+          ${questionsHtml}
+        </div>` : ''}
+
+        <button class="btn btn-primary" id="getPricesBtn">
+          <i class="ti ti-search" aria-hidden="true"></i>
+          Get prices
+        </button>
+        <button class="btn" id="resetBtn">
+          <i class="ti ti-camera" aria-hidden="true"></i>
+          Scan a different item
+        </button>`;
+    }
+
+    // ── RESULTS ──
+    else if (phase === 'results' && item && pricing) {
+      const condStyle = COND_STYLES[item.condition] || COND_STYLES['Good'];
+
+      // Build answered summary to show context
+      const answeredPairs = (item.questions || [])
+        .map((q, i) => answers[i] ? `${q.text.replace(/\?$/, '')} — ${answers[i]}` : null)
+        .filter(Boolean);
+
+      html = `
+        ${preview ? `<img src="${preview}" class="preview-img" alt="Scanned item">` : ''}
+
+        <div class="card">
+          <div class="label">Identified as</div>
+          <div style="font-size:16px;font-weight:500">${item.name || 'Unknown item'}</div>
+          <div class="tags">
+            ${item.brand ? `<span class="tag">${item.brand}</span>` : ''}
+            ${item.category ? `<span class="tag">${item.category}</span>` : ''}
+            ${item.condition ? `<span class="tag-condition" style="${condStyle}">${item.condition}</span>` : ''}
+          </div>
+          ${answeredPairs.length ? `
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">
+            ${answeredPairs.map(p => `<div style="font-size:12px;color:var(--text-3)"><i class="ti ti-check" style="font-size:12px;color:var(--teal);margin-right:4px" aria-hidden="true"></i>${p}</div>`).join('')}
+          </div>` : ''}
         </div>
 
         <div class="card">
@@ -480,6 +582,7 @@ Return ONLY valid JSON (no markdown fences, no explanation):
         </button>`;
     }
 
+    // ── ERROR ──
     else if (phase === 'error') {
       html = `
         ${preview ? `<img src="${preview}" class="preview-img" alt="Scan attempt">` : ''}
@@ -495,8 +598,11 @@ Return ONLY valid JSON (no markdown fences, no explanation):
     }
 
     app.innerHTML = html;
+    attachEvents();
+  }
 
-    // Attach events
+  // ── Event attachment ───────────────────────────────────────────────────────
+  function attachEvents() {
     const dropZone = document.getElementById('dropZone');
     if (dropZone) {
       dropZone.addEventListener('click', () => fileInput.click());
@@ -504,36 +610,62 @@ Return ONLY valid JSON (no markdown fences, no explanation):
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
       });
     }
+
+    // Option buttons (clarification)
+    document.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const qi = parseInt(btn.dataset.qi);
+        const opt = btn.dataset.opt;
+        // Toggle off if already selected
+        state.answers[qi] = state.answers[qi] === opt ? undefined : opt;
+        render();
+      });
+    });
+
+    const getPricesBtn = document.getElementById('getPricesBtn');
+    if (getPricesBtn) getPricesBtn.addEventListener('click', startPricing);
+
     const resetBtn = document.getElementById('resetBtn');
     if (resetBtn) resetBtn.addEventListener('click', reset);
   }
 
-  // ── Reset ────────────────────────────────────────────────────────────────────
+  // ── Start pricing after clarification ─────────────────────────────────────
+  async function startPricing() {
+    const { item, answers } = state;
+    state.phase = 'loading';
+    state.status = `Searching eBay for "${item.ebayQuery}"…`;
+    render();
+    try {
+      const pricing = await getPricing(item, answers);
+      state = { ...state, phase: 'results', pricing };
+      render();
+    } catch (err) {
+      state = { ...state, phase: 'error', error: err.message || 'Something went wrong.' };
+      render();
+    }
+  }
+
+  // ── Reset ──────────────────────────────────────────────────────────────────
   function reset() {
     if (state.preview) URL.revokeObjectURL(state.preview);
-    state = { phase: 'idle', preview: null, item: null, pricing: null, status: '', error: '' };
+    state = { phase: 'idle', preview: null, item: null, pricing: null, answers: {}, status: '', error: '' };
     fileInput.value = '';
     render();
   }
 
-  // ── File input handler ───────────────────────────────────────────────────────
+  // ── File input handler ─────────────────────────────────────────────────────
   fileInput.addEventListener('change', async e => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const preview = URL.createObjectURL(file);
-    state = { ...state, phase: 'loading', preview, status: 'Identifying item...', error: '' };
+    state = { ...state, phase: 'loading', preview, answers: {}, status: 'Identifying item…', error: '' };
     render();
 
     try {
       const b64 = await compressImage(file);
       const item = await identifyItem(b64);
-      state.item = item;
-      state.status = `Searching eBay for "${item.ebayQuery || item.name}"…`;
-      render();
-
-      const pricing = await getPricing(item.ebayQuery || item.name);
-      state = { ...state, phase: 'results', pricing };
+      state = { ...state, phase: 'clarifying', item };
       render();
     } catch (err) {
       state = { ...state, phase: 'error', error: err.message || 'Something went wrong. Try a clearer photo.' };
@@ -541,7 +673,7 @@ Return ONLY valid JSON (no markdown fences, no explanation):
     }
   });
 
-  // ── Init ─────────────────────────────────────────────────────────────────────
+  // ── Init ───────────────────────────────────────────────────────────────────
   render();
 </script>
 </body>

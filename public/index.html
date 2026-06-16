@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Thrift Flip — Price Scanner</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-2: #f5f5f4;
+      --bg-3: #eeeeec;
+      --text-1: #1a1a18;
+      --text-2: #4a4a48;
+      --text-3: #888884;
+      --border: rgba(0,0,0,0.1);
+      --border-md: rgba(0,0,0,0.18);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 18px;
+      --amber: #BA7517;
+      --amber-bg: #FAEEDA;
+      --teal: #0F6E56;
+      --teal-bg: #E1F5EE;
+      --danger: #A32D2D;
+      --danger-bg: #FCEBEB;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a18;
+        --bg-2: #242422;
+        --bg-3: #2e2e2c;
+        --text-1: #f0ede8;
+        --text-2: #a8a8a4;
+        --text-3: #666662;
+        --border: rgba(255,255,255,0.1);
+        --border-md: rgba(255,255,255,0.18);
+        --amber: #EF9F27;
+        --amber-bg: #2a1e08;
+        --teal: #5DCAA5;
+        --teal-bg: #082a1e;
+        --danger: #F09595;
+        --danger-bg: #2a0808;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-2);
+      color: var(--text-1);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 0 0 60px;
+    }
+
+    #app-shell {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 20px 18px 48px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+      padding-top: 12px;
+    }
+    .header-eyebrow {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 5px;
+    }
+    .header-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-1);
+      margin-bottom: 5px;
+    }
+    .header-sub {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 1.5px dashed var(--border-md);
+      border-radius: var(--radius-xl);
+      padding: 56px 24px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--bg-2);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop-zone:hover, .drop-zone:focus {
+      border-color: var(--amber);
+      background: var(--bg-3);
+      outline: none;
+    }
+    .drop-zone-icon {
+      font-size: 52px;
+      color: var(--text-3);
+      display: block;
+      margin-bottom: 14px;
+    }
+    .drop-zone-title { font-size: 17px; font-weight: 500; margin-bottom: 6px; }
+    .drop-zone-sub { font-size: 13px; color: var(--text-3); }
+
+    /* Preview image */
+    .preview-img {
+      width: 100%;
+      border-radius: var(--radius-lg);
+      max-height: 260px;
+      object-fit: cover;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2.5px solid var(--border-md);
+      border-top-color: var(--amber);
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 16px;
+    }
+    .loading-card {
+      text-align: center;
+      padding: 32px 20px;
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .loading-title { font-size: 15px; font-weight: 500; margin-bottom: 5px; }
+    .loading-sub { font-size: 12px; color: var(--text-3); }
+
+    /* Section label */
+    .label {
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 7px;
+    }
+
+    /* Tags */
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .tag {
+      font-size: 12px;
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 3px 9px;
+      color: var(--text-2);
+    }
+    .tag-condition {
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      padding: 3px 9px;
+    }
+
+    /* Notes */
+    .notes { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-top: 10px; }
+
+    /* Price display */
+    .price-hero { margin: 2px 0 4px; line-height: 1; }
+    .price-sym { font-size: 18px; font-weight: 500; color: var(--amber); vertical-align: super; }
+    .price-big { font-size: 50px; font-weight: 600; color: var(--amber); }
+    .price-count { font-size: 12px; color: var(--text-3); margin-bottom: 14px; }
+
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-box {
+      background: var(--bg-2);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+    .stat-label { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+    .stat-val { font-size: 20px; font-weight: 500; }
+
+    /* Tip */
+    .tip-box {
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .tip-icon { font-size: 16px; color: #185FA5; flex-shrink: 0; margin-top: 1px; }
+    .tip-text { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+
+    /* Sales list */
+    .sale-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      gap: 12px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .sale-row:last-child { border-bottom: none; }
+    .sale-title { font-size: 13px; color: var(--text-2); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sale-price { font-size: 14px; font-weight: 500; flex-shrink: 0; }
+
+    /* Button */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: var(--radius-lg);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0.5px solid var(--border-md);
+      background: var(--bg-2);
+      color: var(--text-1);
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--bg-3); }
+    .btn:active { transform: scale(0.98); }
+
+    /* Error */
+    .err-box {
+      background: var(--danger-bg);
+      border: 0.5px solid var(--danger);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .err-icon { font-size: 28px; color: var(--danger); display: block; margin-bottom: 8px; }
+    .err-title { font-size: 14px; font-weight: 600; color: var(--danger); margin-bottom: 4px; }
+    .err-msg { font-size: 13px; color: var(--text-2); }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 11px;
+      color: var(--text-3);
+      line-height: 1.7;
+    }
+    .footer a { color: var(--text-3); }
+  </style>
+</head>
+<body>
+<div id="app-shell">
+  <div class="header">
+    <div class="header-eyebrow">Thrift Flip</div>
+    <div class="header-title">Price Scanner</div>
+    <div class="header-sub">Snap an item — see what it sells for on eBay</div>
+  </div>
+
+  <div id="app"></div>
+
+  <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+
+  <div class="footer">
+    Prices sourced from eBay sold listings via AI search.<br>
+    Results are estimates — always verify before buying.
+  </div>
+</div>
+
+<script>
+  const API_ENDPOINT = '/api/claude';
+  const app = document.getElementById('app');
+  const fileInput = document.getElementById('fileInput');
+
+  let state = { phase: 'idle', preview: null, item: null, pricing: null, status: '', error: '' };
+
+  // ── Image compression ────────────────────────────────────────────────────────
+  function compressImage(file) {
+    return new Promise(resolve => {
+      const canvas = document.createElement('canvas');
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const MAX = 1024;
+        if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1]);
+      };
+      img.src = url;
+    });
+  }
+
+  // ── JSON parsing (handles markdown fences) ───────────────────────────────────
+  function parseJSON(text) {
+    const clean = text.replace(/```[a-z]*\n?|\n?```/g, '').trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Could not parse AI response. Try a clearer photo.');
+    return JSON.parse(match[0]);
+  }
+
+  // ── API calls ────────────────────────────────────────────────────────────────
+  async function callAPI(body) {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
+    return data;
+  }
+
+  async function identifyItem(b64) {
+    const data = await callAPI({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+          { type: 'text', text: `You are a resale expert helping identify thrift store items. Identify this item as specifically as possible — brand, model, size, any visible details that affect resale value.
+
+Return ONLY valid JSON (no markdown fences, no explanation):
+{
+  "name": "specific item name with brand and model if identifiable",
+  "brand": "brand name, or empty string if unknown",
+  "category": "Electronics|Clothing|Kitchenware|Books|Toys|Furniture|Sports|Collectibles|Other",
+  "ebayQuery": "optimized eBay search query to find sold listings for this exact item",
+  "condition": "Poor|Fair|Good|Very Good|Excellent",
+  "notes": "2–3 key details that most affect resale value"
+}` }
+        ]
+      }]
+    });
+    return parseJSON(data.content.map(c => c.text || '').join(''));
+  }
+
+  async function getPricing(query) {
+    const data = await callAPI({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      messages: [{
+        role: 'user',
+        content: `Search eBay for recently SOLD (completed) listings for: "${query}"
+
+Find real sale prices from eBay completed/sold listings, not just listing prices.
+
+Return ONLY valid JSON (no markdown fences, no explanation):
+{
+  "avg": 25.00,
+  "low": 10.00,
+  "high": 50.00,
+  "count": 8,
+  "tip": "one concrete sentence about what most affects value for this item",
+  "sales": [
+    {"title": "listing title", "price": 25.00}
+  ]
+}`
+      }]
+    });
+    return parseJSON(data.content.map(c => c.text || '').filter(Boolean).join(''));
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function fmt(n) {
+    const num = Number(n);
+    return isNaN(num) ? '—' : num.toFixed(2);
+  }
+
+  const COND_STYLES = {
+    'Poor':      'color:#A32D2D;background:#FCEBEB;border:0.5px solid #F09595',
+    'Fair':      'color:#854F0B;background:#FAEEDA;border:0.5px solid #FAC775',
+    'Good':      'color:#5F5E5A;background:#F1EFE8;border:0.5px solid #B4B2A9',
+    'Very Good': 'color:#0F6E56;background:#E1F5EE;border:0.5px solid #5DCAA5',
+    'Excellent': 'color:#185FA5;background:#E6F1FB;border:0.5px solid #85B7EB',
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+  function render() {
+    const { phase, preview, item, pricing, status, error } = state;
+    let html = '';
+
+    if (phase === 'idle') {
+      html = `
+        <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Take photo or choose from camera roll">
+          <i class="ti ti-camera drop-zone-icon" aria-hidden="true"></i>
+          <div class="drop-zone-title">Take a photo</div>
+          <div class="drop-zone-sub">Or tap to choose from your camera roll</div>
+        </div>`;
+    }
+
+    else if (phase === 'loading') {
+      html = `
+        ${preview ? `<img src="${preview}" class="preview-img" alt="Item being scanned">` : ''}
+        <div class="loading-card">
+          <div class="spinner"></div>
+          <div class="loading-title">${status}</div>
+          <div class="loading-sub">Takes about 15–25 seconds</div>
+        </div>`;
+    }
+
+    else if (phase === 'results' && item && pricing) {
+      const condStyle = COND_STYLES[item.condition] || COND_STYLES['Good'];
+      html = `
+        ${preview ? `<img src="${preview}" class="preview-img" alt="Scanned item">` : ''}
+
+        <div class="card">
+          <div class="label">Identified as</div>
+          <div style="font-size:16px;font-weight:500">${item.name || 'Unknown item'}</div>
+          <div class="tags">
+            ${item.brand ? `<span class="tag">${item.brand}</span>` : ''}
+            ${item.category ? `<span class="tag">${item.category}</span>` : ''}
+            ${item.condition ? `<span class="tag-condition" style="${condStyle}">${item.condition}</span>` : ''}
+          </div>
+          ${item.notes ? `<div class="notes">${item.notes}</div>` : ''}
+        </div>
+
+        <div class="card">
+          <div class="label">eBay avg sold price</div>
+          <div class="price-hero">
+            <span class="price-sym">$</span><span class="price-big">${fmt(pricing.avg)}</span>
+          </div>
+          <div class="price-count">average of ~${pricing.count || '?'} recent sales</div>
+          <div class="stat-grid">
+            <div class="stat-box">
+              <div class="stat-label">Low</div>
+              <div class="stat-val">$${fmt(pricing.low)}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">High</div>
+              <div class="stat-val">$${fmt(pricing.high)}</div>
+            </div>
+          </div>
+        </div>
+
+        ${pricing.tip ? `
+        <div class="tip-box">
+          <i class="ti ti-bulb tip-icon" aria-hidden="true"></i>
+          <div class="tip-text">${pricing.tip}</div>
+        </div>` : ''}
+
+        ${pricing.sales && pricing.sales.length ? `
+        <div class="card">
+          <div class="label">Recent sales</div>
+          ${pricing.sales.slice(0, 6).map(s => `
+            <div class="sale-row">
+              <div class="sale-title">${s.title || ''}</div>
+              <div class="sale-price">$${fmt(s.price)}</div>
+            </div>`).join('')}
+        </div>` : ''}
+
+        <button class="btn" id="resetBtn">
+          <i class="ti ti-camera" aria-hidden="true"></i>
+          Scan another item
+        </button>`;
+    }
+
+    else if (phase === 'error') {
+      html = `
+        ${preview ? `<img src="${preview}" class="preview-img" alt="Scan attempt">` : ''}
+        <div class="err-box">
+          <i class="ti ti-alert-circle err-icon" aria-hidden="true"></i>
+          <div class="err-title">Scan failed</div>
+          <div class="err-msg">${error}</div>
+        </div>
+        <button class="btn" id="resetBtn">
+          <i class="ti ti-refresh" aria-hidden="true"></i>
+          Try again
+        </button>`;
+    }
+
+    app.innerHTML = html;
+
+    // Attach events
+    const dropZone = document.getElementById('dropZone');
+    if (dropZone) {
+      dropZone.addEventListener('click', () => fileInput.click());
+      dropZone.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+      });
+    }
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', reset);
+  }
+
+  // ── Reset ────────────────────────────────────────────────────────────────────
+  function reset() {
+    if (state.preview) URL.revokeObjectURL(state.preview);
+    state = { phase: 'idle', preview: null, item: null, pricing: null, status: '', error: '' };
+    fileInput.value = '';
+    render();
+  }
+
+  // ── File input handler ───────────────────────────────────────────────────────
+  fileInput.addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const preview = URL.createObjectURL(file);
+    state = { ...state, phase: 'loading', preview, status: 'Identifying item...', error: '' };
+    render();
+
+    try {
+      const b64 = await compressImage(file);
+      const item = await identifyItem(b64);
+      state.item = item;
+      state.status = `Searching eBay for "${item.ebayQuery || item.name}"…`;
+      render();
+
+      const pricing = await getPricing(item.ebayQuery || item.name);
+      state = { ...state, phase: 'results', pricing };
+      render();
+    } catch (err) {
+      state = { ...state, phase: 'error', error: err.message || 'Something went wrong. Try a clearer photo.' };
+      render();
+    }
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  render();
+</script>
+</body>
+</html>

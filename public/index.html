@@ -367,7 +367,7 @@
   const fileInput = document.getElementById('fileInput');
 
   // state.answers = { [questionIndex]: "answer string" }
-  let state = { phase: 'idle', preview: null, item: null, pricing: null, answers: {}, status: '', error: '' };
+  let state = { phase: 'idle', preview: null, item: null, pricing: null, answers: {}, impacts: {}, status: '', error: '' };
 
   // ── Image compression ──────────────────────────────────────────────────────
   function compressImage(file) {
@@ -435,7 +435,7 @@
   // ── Step 1: Identify items + generate clarifying questions ────────────────
   async function identifyItem(b64) {
     const data = await callAPI({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
       messages: [{
         role: 'user',
@@ -447,7 +447,9 @@ First, identify ALL distinct resaleable items visible in the photo. If there is 
 
 For EACH item, also generate 1-3 short clarifying questions whose answers will meaningfully change the resale price. Focus on things not visible in the photo (accessories, packaging, model number, size, working condition). Skip anything already clearly visible.
 
-For questions about information that could be read from a label, tag, sticker, or a photo of the item's back/underside (brand name, model number, serial number, size marking, capacity, storage size, year), set "photoAnswerable": true and write a "photoPrompt" describing exactly what to photograph and read. For yes/no or condition questions, set "photoAnswerable": false.
+For questions about information that could be read from a label, tag, sticker, or a photo of the item's back/underside (brand name, model number, serial number, size marking, capacity, storage size, year), set "photoAnswerable": true and write a "photoPrompt" describing exactly what to photograph and read. Give these a single neutral option with priceImpact 0.
+
+For yes/no or condition questions, set "photoAnswerable": false and give each option a "priceImpact": a decimal fraction estimating how much that answer typically shifts resale price versus baseline (e.g. -0.15 for a 15% decrease, 0.1 for a 10% increase). Always include a neutral "Not sure" option with priceImpact 0.
 
 Return ONLY valid JSON (no markdown fences):
 {
@@ -462,13 +464,17 @@ Return ONLY valid JSON (no markdown fences):
       "questions": [
         {
           "text": "What is the model number?",
-          "options": ["Not sure"],
+          "options": [{"label": "Not sure", "priceImpact": 0}],
           "photoAnswerable": true,
           "photoPrompt": "Read the model number exactly as printed on the label or back of the device"
         },
         {
           "text": "Does it include the original charger?",
-          "options": ["Yes, included", "No charger", "Not sure"],
+          "options": [
+            {"label": "Yes, included", "priceImpact": 0.1},
+            {"label": "No charger", "priceImpact": -0.15},
+            {"label": "Not sure", "priceImpact": 0}
+          ],
           "photoAnswerable": false
         }
       ]
@@ -476,7 +482,7 @@ Return ONLY valid JSON (no markdown fences):
   ]
 }
 
-Make question options short (2-4 words). Always include a "Not sure" option. Questions must be specific to each item type, not generic.` }
+Make option labels short (2-4 words). Keep priceImpact values realistic, typically between -0.3 and 0.3. Questions must be specific to each item type, not generic.` }
         ]
       }]
     });
@@ -497,7 +503,7 @@ Make question options short (2-4 words). Always include a "Not sure" option. Que
     const context = qa ? `\n\nAdditional details from inspection:\n${qa}` : '';
 
     const data = await callAPI({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1000,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{
@@ -520,38 +526,38 @@ Find real sale prices from eBay completed/sold listings. Return ONLY valid JSON 
     return parseJSON(data.content.map(c => c.text || '').filter(Boolean).join(''));
   }
 
-  // ── Step 3: Quick price adjustment based on answers (no web search) ─────────
-  async function refinePricing(base, item, answers) {
-    const qa = (item.questions || []).map((q, i) => {
-      const ans = answers[i];
-      const skip = !ans || ans === 'Not sure' || ans === "Can't tell";
-      return skip ? null : `- ${q.text} → ${ans}`;
-    }).filter(Boolean).join('\n');
-
-    if (!qa) return base;
-
-    const data = await callAPI({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      messages: [{
-        role: 'user',
-        content: `eBay sold prices for "${item.name}": avg $${base.avg}, low $${base.low}, high $${base.high} (~${base.count} sales).
-
-The seller confirmed:
-${qa}
-
-Adjust the estimates if these details materially affect resale value. Return ONLY valid JSON (no markdown fences):
-{
-  "avg": ${base.avg},
-  "low": ${base.low},
-  "high": ${base.high},
-  "count": ${base.count},
-  "tip": "one sentence on how these specific details affect value",
-  "sales": ${JSON.stringify(base.sales || [])}
-}`
-      }]
+  // ── Step 3: Apply price adjustments from selected answers (pure JS, no API call) ─
+  function applyPriceAdjustments(base, item, impacts) {
+    const adjustments = []; // { label, impact }
+    (item.questions || []).forEach((q, qi) => {
+      const impact = impacts[qi];
+      if (typeof impact === 'number' && impact !== 0) {
+        const opt = (q.options || []).find(o => o.priceImpact === impact);
+        adjustments.push({ label: opt ? opt.label : q.text, impact });
+      }
     });
-    return parseJSON(data.content.map(c => c.text || '').join(''));
+
+    if (adjustments.length === 0) return base;
+
+    // Sum impacts, clamp to a sane range so stacked answers can't blow out the estimate
+    let totalImpact = adjustments.reduce((sum, a) => sum + a.impact, 0);
+    totalImpact = Math.max(-0.6, Math.min(0.6, totalImpact));
+    const multiplier = 1 + totalImpact;
+
+    const round2 = n => Math.round(n * 100) / 100;
+
+    const tipParts = adjustments.map(a =>
+      `${a.label} (${a.impact > 0 ? '+' : ''}${Math.round(a.impact * 100)}%)`
+    );
+    const tip = `Adjusted for: ${tipParts.join(', ')}.`;
+
+    return {
+      ...base,
+      avg: round2(base.avg * multiplier),
+      low: round2(base.low * multiplier),
+      high: round2(base.high * multiplier),
+      tip,
+    };
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -659,10 +665,11 @@ Adjust the estimates if these details materially affect resale value. Return ONL
             <div class="option-grid">
               ${(q.options || []).map(opt => `
                 <button
-                  class="option-btn ${answers[qi] === opt ? 'selected' : ''}"
+                  class="option-btn ${answers[qi] === opt.label ? 'selected' : ''}"
                   data-qi="${qi}"
-                  data-opt="${opt.replace(/"/g, '&quot;')}"
-                >${opt}</button>
+                  data-opt="${opt.label.replace(/"/g, '&quot;')}"
+                  data-impact="${opt.priceImpact || 0}"
+                >${opt.label}</button>
               `).join('')}
               ${q.photoAnswerable ? `
                 <button class="option-btn photo-btn" data-photo-qi="${qi}" data-photo-prompt="${(q.photoPrompt || '').replace(/"/g, '&quot;')}">
@@ -805,7 +812,7 @@ Adjust the estimates if these details materially affect resale value. Return ONL
         const idx = parseInt(card.dataset.idx);
         const item = state.foundItems[idx];
         const pricingPromise = getPricing(item, {});
-        state = { ...state, phase: 'clarifying', item, answers: {}, pricingPromise };
+        state = { ...state, phase: 'clarifying', item, answers: {}, impacts: {}, pricingPromise };
         render();
       });
     });
@@ -819,13 +826,21 @@ Adjust the estimates if these details materially affect resale value. Return ONL
       });
     });
 
-    // Option buttons (clarification)
-    document.querySelectorAll('.option-btn').forEach(btn => {
+    // Option buttons (clarification) — skip photo-trigger buttons, handled separately above
+    document.querySelectorAll('.option-btn:not(.photo-btn)').forEach(btn => {
       btn.addEventListener('click', () => {
         const qi = parseInt(btn.dataset.qi);
         const opt = btn.dataset.opt;
+        const impact = parseFloat(btn.dataset.impact) || 0;
+        if (!state.impacts) state.impacts = {};
         // Toggle off if already selected
-        state.answers[qi] = state.answers[qi] === opt ? undefined : opt;
+        if (state.answers[qi] === opt) {
+          state.answers[qi] = undefined;
+          state.impacts[qi] = undefined;
+        } else {
+          state.answers[qi] = opt;
+          state.impacts[qi] = impact;
+        }
         render();
       });
     });
@@ -839,31 +854,15 @@ Adjust the estimates if these details materially affect resale value. Return ONL
 
   // ── Start pricing after clarification ─────────────────────────────────────
   async function startPricing() {
-    const { item, answers, photoAnswers, pricingPromise } = state;
-
-    // Merge tap answers + photo-read answers
-    const allAnswers = { ...answers };
-    if (photoAnswers) {
-      Object.entries(photoAnswers).forEach(([qi, val]) => { allAnswers[qi] = val; });
-    }
+    const { item, impacts, pricingPromise } = state;
 
     state.phase = 'loading';
     state.status = 'Looking up eBay prices...';
     render();
     try {
       const base = await pricingPromise;
-
-      const hasSubstantiveAnswers = (item.questions || []).some((q, i) => {
-        const ans = allAnswers[i];
-        return ans && ans !== 'Not sure' && ans !== "Can't tell";
-      });
-
-      let pricing = base;
-      if (hasSubstantiveAnswers) {
-        state.status = 'Adjusting for your details...';
-        render();
-        pricing = await refinePricing(base, item, allAnswers);
-      }
+      // No AI call needed here — price adjustment from tap answers is pure JS math
+      const pricing = applyPriceAdjustments(base, item, impacts || {});
 
       state = { ...state, phase: 'results', pricing };
       render();
@@ -908,7 +907,7 @@ Adjust the estimates if these details materially affect resale value. Return ONL
   window.clearPhotoAnswer = clearPhotoAnswer;
   function reset() {
     if (state.preview) URL.revokeObjectURL(state.preview);
-    state = { phase: 'idle', preview: null, item: null, foundItems: null, pricing: null, answers: {}, photoAnswers: {}, photoLoadingIdx: null, pricingPromise: null, status: '', error: '' };
+    state = { phase: 'idle', preview: null, item: null, foundItems: null, pricing: null, answers: {}, impacts: {}, photoAnswers: {}, photoLoadingIdx: null, pricingPromise: null, status: '', error: '' };
     fileInput.value = '';
     render();
   }
@@ -919,7 +918,7 @@ Adjust the estimates if these details materially affect resale value. Return ONL
     if (!file) return;
 
     const preview = URL.createObjectURL(file);
-    state = { ...state, phase: 'loading', preview, answers: {}, status: 'Identifying item…', error: '' };
+    state = { ...state, phase: 'loading', preview, answers: {}, impacts: {}, status: 'Identifying item…', error: '' };
     render();
 
     try {
@@ -928,7 +927,7 @@ Adjust the estimates if these details materially affect resale value. Return ONL
       if (items.length === 1) {
         const item = items[0];
         const pricingPromise = getPricing(item, {});
-        state = { ...state, phase: 'clarifying', item, answers: {}, pricingPromise };
+        state = { ...state, phase: 'clarifying', item, answers: {}, impacts: {}, pricingPromise };
       } else {
         state = { ...state, phase: 'selecting', foundItems: items };
       }

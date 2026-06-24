@@ -377,7 +377,7 @@
       const url = URL.createObjectURL(file);
       img.onload = () => {
         let w = img.width, h = img.height;
-        const MAX = 1024;
+        const MAX = 768;
         if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
         canvas.width = w; canvas.height = h;
@@ -433,62 +433,104 @@
   };
 
   // ── Step 1: Identify items + generate clarifying questions ────────────────
+  // ── Question lookup table (replaces AI-generated questions - zero tokens) ──
+  function getQuestionsForItem(item) {
+    const name = (item.name || '').toLowerCase();
+    const cat  = item.category || 'Other';
+
+    const q = (text, options, photoAnswerable = false, photoPrompt = '') =>
+      ({ text, options, photoAnswerable, photoPrompt });
+    const opt = (label, priceImpact) => ({ label, priceImpact });
+    const skip = { label: 'Not sure', priceImpact: 0 };
+
+    // Common building blocks
+    const powersOn   = q('Does it power on?',
+      [opt('Yes, works', 0.1), opt('No / untested', -0.4), skip]);
+    const hasCharger = q('Does it include the charger?',
+      [opt('Yes', 0.1), opt('No charger', -0.15), skip]);
+    const hasCable   = q('Does it include all cables?',
+      [opt('Yes', 0.08), opt('No cables', -0.12), skip]);
+    const hasBox     = q('Does it include the original box?',
+      [opt('Yes, with box', 0.12), opt('No box', -0.05), skip]);
+    const hasCase    = q('Does it include a case or pouch?',
+      [opt('Yes', 0.08), opt('No case', -0.05), skip]);
+    const complete   = q('All parts and accessories present?',
+      [opt('Seems complete', 0.05), opt('Missing parts', -0.25), skip]);
+    const lensIncl   = q('Does it include a lens?',
+      [opt('Yes, with lens', 0.2), opt('Body only', -0.15), skip]);
+    const hasManual  = q('Original manual or docs included?',
+      [opt('Yes', 0.05), opt('No manual', 0), skip]);
+
+    const modelPhoto = q('Model number visible on label?',
+      [skip], true, 'Photograph the label or underside and read the model number exactly as printed');
+    const sizePhoto  = q('What size is it?',
+      [skip], true, 'Read the size from the clothing tag or label');
+    const storagePhoto = q('Storage capacity?',
+      [skip], true, 'Read the storage size (e.g. 64GB, 256GB) from the label or Settings screen');
+
+    const hasTags    = q('Tags still attached?',
+      [opt('Yes, with tags', 0.18), opt('No tags', 0), skip]);
+    const hasFlaws   = q('Any visible stains or damage?',
+      [opt('None visible', 0.08), opt('Minor flaws', -0.2), skip]);
+
+    const firstEd    = q('First edition or signed copy?',
+      [opt('Yes', 0.5), opt('No', 0), skip]);
+    const bookCond   = q('Any writing or highlighting inside?',
+      [opt('Clean copy', 0.08), opt('Has markings', -0.2), skip]);
+
+    // Category defaults
+    const defaults = {
+      Electronics:  [powersOn, hasCharger, modelPhoto],
+      Clothing:     [hasTags, hasFlaws, sizePhoto],
+      Kitchenware:  [complete, hasBox],
+      Books:        [firstEd, bookCond],
+      Toys:         [complete, hasBox],
+      Furniture:    [complete],
+      Sports:       [complete, hasCase],
+      Collectibles: [complete, modelPhoto],
+      Other:        [complete],
+    };
+
+    let questions = [...(defaults[cat] || defaults.Other)];
+
+    // Keyword overrides for common Electronics subcategories
+    if (cat === 'Electronics') {
+      if (/headphone|earphone|earbud|airpod|buds/.test(name))
+        questions = [powersOn, hasCase, hasCharger];
+      else if (/iphone|android|smartphone|galaxy|pixel/.test(name))
+        questions = [powersOn, storagePhoto, hasCharger];
+      else if (/ipad|tablet/.test(name))
+        questions = [powersOn, storagePhoto, hasCharger];
+      else if (/laptop|macbook|chromebook|thinkpad/.test(name))
+        questions = [powersOn, hasCharger, modelPhoto];
+      else if (/camera|dslr|mirrorless/.test(name))
+        questions = [powersOn, lensIncl, complete];
+      else if (/console|playstation|xbox|nintendo|ps[2345]|wii/.test(name))
+        questions = [powersOn, complete, hasCable];
+      else if (/printer|scanner/.test(name))
+        questions = [powersOn, complete, hasManual];
+      else if (/watch|smartwatch|fitbit|garmin/.test(name))
+        questions = [powersOn, hasCharger, hasBox];
+    }
+
+    return questions.slice(0, 3);
+  }
+
   async function identifyItem(b64) {
     const data = await callAPI({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
+      max_tokens: 500,
       messages: [{
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-          { type: 'text', text: `You are a resale expert helping identify thrift store items for resale pricing.
+          { type: 'text', text: `Identify resaleable items in this thrift store photo.
 
-First, check if the photo is clear enough to identify items with reasonable confidence. If it is too blurry, too dark, too far away, or otherwise unclear to identify any item, return ONLY:
-{
-  "unclear": true,
-  "reason": "short specific reason, e.g. 'photo is blurry' or 'too dark to make out details' or 'too far away to identify'"
-}
+If the photo is too blurry, dark, or unclear to identify anything, return ONLY:
+{"unclear":true,"reason":"brief reason"}
 
-Otherwise, identify ALL distinct resaleable items visible in the photo. If there is only one item, return just that one. If there are multiple separate items, list each one.
-
-For EACH item, also generate 1-3 short clarifying questions whose answers will meaningfully change the resale price. Focus on things not visible in the photo (accessories, packaging, model number, size, working condition). Skip anything already clearly visible.
-
-For questions about information that could be read from a label, tag, sticker, or a photo of the item's back/underside (brand name, model number, serial number, size marking, capacity, storage size, year), set "photoAnswerable": true and write a "photoPrompt" describing exactly what to photograph and read. Give these a single neutral option with priceImpact 0.
-
-For yes/no or condition questions, set "photoAnswerable": false and give each option a "priceImpact": a decimal fraction estimating how much that answer typically shifts resale price versus baseline (e.g. -0.15 for a 15% decrease, 0.1 for a 10% increase). Always include a neutral "Not sure" option with priceImpact 0.
-
-Return ONLY valid JSON (no markdown fences):
-{
-  "items": [
-    {
-      "name": "specific item name with brand and model if identifiable",
-      "brand": "brand name, or empty string if unknown",
-      "category": "Electronics|Clothing|Kitchenware|Books|Toys|Furniture|Sports|Collectibles|Other",
-      "ebayQuery": "optimized eBay search query to find sold listings",
-      "condition": "Poor|Fair|Good|Very Good|Excellent",
-      "notes": "2-3 key details visible in the photo that affect resale value",
-      "questions": [
-        {
-          "text": "What is the model number?",
-          "options": [{"label": "Not sure", "priceImpact": 0}],
-          "photoAnswerable": true,
-          "photoPrompt": "Read the model number exactly as printed on the label or back of the device"
-        },
-        {
-          "text": "Does it include the original charger?",
-          "options": [
-            {"label": "Yes, included", "priceImpact": 0.1},
-            {"label": "No charger", "priceImpact": -0.15},
-            {"label": "Not sure", "priceImpact": 0}
-          ],
-          "photoAnswerable": false
-        }
-      ]
-    }
-  ]
-}
-
-Make option labels short (2-4 words). Keep priceImpact values realistic, typically between -0.3 and 0.3. Questions must be specific to each item type, not generic.` }
+Otherwise return ONLY valid JSON (no markdown):
+{"items":[{"name":"brand + item name + model if visible","brand":"brand or empty","category":"Electronics|Clothing|Kitchenware|Books|Toys|Furniture|Sports|Collectibles|Other","ebayQuery":"best eBay search for sold listings","condition":"Poor|Fair|Good|Very Good|Excellent","notes":"2-3 visible details affecting resale value"}]}` }
         ]
       }]
     });
@@ -499,10 +541,10 @@ Make option labels short (2-4 words). Keep priceImpact values realistic, typical
     if (parsed.unclear) {
       throw new Error(`Couldn't get a good look at the item (${parsed.reason || 'photo unclear'}). Try moving closer, holding steady, or improving lighting.`);
     }
-    // Normalise: support both { items: [...] } and a bare single-item object
-    if (Array.isArray(parsed.items)) return parsed.items;
-    if (parsed.name) return [parsed];
-    throw new Error('Could not identify any items in the photo.');
+    const items = Array.isArray(parsed.items) ? parsed.items : parsed.name ? [parsed] : null;
+    if (!items) throw new Error('Could not identify any items in the photo.');
+    // Attach questions from local lookup - no AI needed, zero extra tokens
+    return items.map(item => ({ ...item, questions: getQuestionsForItem(item) }));
   }
 
   // ── Step 2: Look up pricing (runs in background during clarification) ────────
@@ -518,7 +560,7 @@ Make option labels short (2-4 words). Keep priceImpact values realistic, typical
       const data = await callAPI({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 2000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }],
         messages: [{
           role: 'user',
           content: `Search eBay for recently SOLD (completed) listings for: "${item.ebayQuery}"${context}
